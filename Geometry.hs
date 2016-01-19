@@ -1,24 +1,35 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Geometry (Point(..), Line(..), Param(..), AABB(..), Geometry, AnyGeometry(..), 
-                 lineLinesIntersection, bbox, translate, stretch, addAABBs) where
+                 Color(..),lineLinesIntersection, bbox, translate, stretch, 
+                 addAABBs,showSVG) where
 
 data Param  = Param Float        deriving (Show)
 data Point  = Point Float Float  deriving (Show)
 data Line   = Line Point Point   deriving (Show)
 data AABB   = AABB Point Point   deriving (Show) --Lower Left, Upper Right
 
+data Color = Red | Green | Blue
+instance Show Color where
+   show Red   = "rgb(255,0,0)" 
+   show Green = "rgb(0,255,0)" 
+   show Blue  = "rgb(0,0,255)" 
+
 
 class Geometry a where
   bbox    :: a -> AABB
   translate :: Point -> a -> a
   stretch   :: Point -> (Float, Float) -> a -> a --center of stretch -> magnitude -> orig -> stretched
+  showSVG :: (Color, a) -> String
 
 
 instance Geometry Point where
   bbox point = AABB point point
   translate (Point dx dy) (Point x y) = Point (x+dx) (y+dy)
   stretch (Point cx cy) (magx, magy) (Point x y) = Point (cx+(x-cx)*magx) (cy+(y-cy)*magy)
+  showSVG (color, (Point x y)) = "<circle cx=\"" ++ show x 
+                           ++ "\" cy=\""      ++ show y 
+                           ++ "\" r=\"4\" fill=\"" ++ (show color) ++ "\" />\n"
 
 instance Geometry Line where
   bbox (Line (Point x1 y1) (Point x2 y2))  = AABB (Point minx miny) (Point maxx maxy)
@@ -32,12 +43,20 @@ instance Geometry Line where
   stretch center magnitude (Line pt1 pt2) = 
       Line (stretch center magnitude pt1) (stretch center magnitude pt2)
 
+  showSVG (color, (Line (Point x1 y1) (Point x2 y2))) = "<line x1=\"" ++ show x1 
+                                                  ++ "\" y1=\"" ++ show y1 
+                                                  ++ "\" x2=\"" ++ show x2 
+                                                  ++ "\" y2=\"" ++ show y2 
+                                                  ++ "\" style=\"stroke:" ++ (show color) 
+                                                  ++ ";stroke-width:2\" />\n"
+
 data AnyGeometry = forall x. (Geometry x) => AnyGeometry x
 
 instance Geometry AnyGeometry where
   bbox (AnyGeometry x) = bbox x
   translate point (AnyGeometry x) = AnyGeometry $ translate point x
   stretch point magnitude (AnyGeometry x) = AnyGeometry $ stretch point magnitude x
+  showSVG (color, AnyGeometry x) = showSVG (color, x)
 
 addAABBs :: AABB -> AABB -> AABB
 addAABBs (AABB (Point minx1 miny1) (Point maxx1 maxy1)) (AABB (Point minx2 miny2) (Point maxx2 maxy2)) = 

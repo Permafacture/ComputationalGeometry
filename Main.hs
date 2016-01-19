@@ -1,5 +1,5 @@
-import Svg_writer (writeSVG, Color(..), AnyShowSVG) 
-import Geometry (Line(..),Point(..))
+import Svg_writer (writeSVG)
+import Geometry (Line(..),Point(..),Color(..),AnyGeometry(..))
 import GeomParser (parseCSV)
 
 --parsing happens within IO, so we can print error messages!
@@ -34,12 +34,13 @@ main = do
 
   lines1 <- parse_without_error "./data/lines1.txt" 
   lines2 <- parse_without_error "./data/lines2.txt"
-  --let data2plot = find_intersects lines1 lines2
-  let anylines1 = map AnyShowSVG lines1
-  let anylines2 = map AnyShowSVG lines2
+  let anylines1 = map AnyGeometry lines1
+  let anylines2 = map AnyGeometry lines2
+  --  let data2plot = map green $ map AnyGeometry $ find_intersects lines1 lines2
+  let data2plot = map (green . AnyGeometry . get_start) lines1
   let redlines  = map red anylines1
   let bluelines = map blue anylines2
-  writeSVG (300,300) [redlines,bluelines] "./output/monads.svg"
+  writeSVG (300,300) [redlines,bluelines,data2plot] "./output/monads.svg"
 
 {-
 main = do
