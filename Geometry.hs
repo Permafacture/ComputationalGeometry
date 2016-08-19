@@ -1,8 +1,10 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Geometry (Point(..), Line(..), Param(..), AABB(..), Geometry, AnyGeometry(..), 
-                 Color(..),lineLinesIntersection, bbox, translate, stretch, 
-                 addAABBs,showSVG) where
+                 Color(..), linesLinesIntersection, evalIntersects2D, bbox, evalLineParameter, 
+                 translate, stretch, addAABBs,showSVG) where
+
+import Data.Maybe (mapMaybe)
 
 data Param  = Param Float        deriving (Show)
 data Point  = Point Float Float  deriving (Show)
@@ -67,10 +69,17 @@ addAABBs (AABB (Point minx1 miny1) (Point maxx1 maxy1)) (AABB (Point minx2 miny2
         newminy = min miny1 miny2
         newmaxy = max maxy1 maxy2
 
+
+inRange :: Float -> Float -> Float -> Bool
+inRange min max val = (val <= max) && (val >= min)
+
+validParam = inRange 0.0 1.0
+
 lineLineIntersection :: Line -> Line -> Maybe (Param, Param)
+--get the parametric value of the intersection for each of the two lines
 lineLineIntersection (Line (Point x1 y1) (Point x2 y2)) (Line (Point x3 y3) (Point x4 y4))
   | den == 0 =  Nothing
-  | (numa /= 0) && (numb /= 0) = Just (Param ua, Param ub)
+  | (numa /= 0) && (numb /= 0) && (validParam ua) && (validParam ub) = Just (Param ua, Param ub)
   | otherwise = Nothing
        where
          den =  (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1)
@@ -82,6 +91,27 @@ lineLineIntersection (Line (Point x1 y1) (Point x2 y2)) (Line (Point x3 y3) (Poi
 lineLinesIntersection :: Line -> [Line] -> [Maybe (Param, Param)]
 lineLinesIntersection l1 l2 = map (lineLineIntersection l1) l2
 
-evalLineParameter :: Line -> Param -> Point
-evalLineParameter (Line (Point x1 y1) (Point x2 y2)) (Param u) = Point (x1+u*x2) (x2+u*y2) 
+linesLinesIntersection :: [Line] -> [Line] ->[[Maybe (Param, Param)]]
+linesLinesIntersection l1s l2s = map ((flip lineLinesIntersection) l2s) l1s
 
+evalLineParameter :: Line -> Param -> Point
+evalLineParameter (Line (Point x1 y1) (Point x2 y2)) (Param u) = Point (x1+u*(x2-x1)) (y1+u*(y2-y1)) 
+
+evalIntersects :: Line -> [Maybe (Param, Param)] -> [Point]
+--assumes line corisponds to the first of the two parameters
+evalIntersects line list = map (evalLineParameter line) $ map fst (mapMaybe id list)
+
+evalIntersects2D :: [Line] -> [[Maybe (Param, Param)]] -> [[Point]]
+evalIntersects2D lines list2d = [f args | args <- zip lines list2d]
+    where f = \(l, p) -> evalIntersects l p
+
+--test data
+testP1 = Point 1.2 2.4
+testP2 = Point (-1.2) (-2.4)
+testP3 = Point (-1.2) 2.4
+testP4 = Point (1.2) (-2.4)
+
+testL1 = Line testP1 testP2
+testL2 = Line testP3 testP4
+
+testL1s = [testL1, testL2]

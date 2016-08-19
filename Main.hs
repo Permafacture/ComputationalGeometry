@@ -1,5 +1,5 @@
 import Svg_writer (writeSVG)
-import Geometry (Line(..),Point(..),Color(..),AnyGeometry(..))
+import Geometry (linesLinesIntersection,evalIntersects2D,evalLineParameter,Line(..),Point(..),Color(..),AnyGeometry(..),Param(..))
 import GeomParser (parseCSV)
 
 --parsing happens within IO, so we can print error messages!
@@ -14,7 +14,7 @@ parse_without_error filename = do
       show_error msg = "\nThere was an error in " ++ filename ++ ":\n" ++ (show msg)
 
 get_start :: Line -> Point
-get_start (Line begin_pt end_pt) = begin_pt
+get_start line = evalLineParameter line (Param 0.0)
 
 {- Can't mix points and lines
 -- geometricData? 
@@ -34,14 +34,13 @@ main = do
 
   lines1 <- parse_without_error "./data/lines1.txt" 
   lines2 <- parse_without_error "./data/lines2.txt"
-  let anylines1 = map AnyGeometry lines1
-  let anylines2 = map AnyGeometry lines2
-  --  let data2plot = map green $ map AnyGeometry $ find_intersects lines1 lines2
-  let data2plot = map (green . AnyGeometry . get_start) lines1
-  let redlines  = map red anylines1
-  let bluelines = map blue anylines2
-  writeSVG (300,300) [redlines,bluelines,data2plot] "./output/monads.svg"
-
+  let redlines = map (red . AnyGeometry) lines1
+  let bluelines = map (blue . AnyGeometry) lines2
+  let intersections = evalIntersects2D lines1 $ linesLinesIntersection lines1 lines2
+  let data2plot = map (green . AnyGeometry) $ concat intersections
+  --let data2plot = map green $ map AnyGeometry $ map get_start lines2 
+  --let data2plot = map (green . AnyGeometry . get_start) lines1
+  writeSVG (800,800) [redlines,bluelines,data2plot] "./output/monads.svg"
 {-
 main = do
   (lines1:lines2) <- mapM parse_without_error ["../data/lines1.txt","../data/lines2.txt"]
